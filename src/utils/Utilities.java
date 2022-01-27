@@ -20,5 +20,5 @@ public final class Utilities {
     public static long bytesToMeg(long bytes) {
         final long MEGABYTE = 1024L * 1024L;
         return bytes / MEGABYTE;
-    }
+}
 }

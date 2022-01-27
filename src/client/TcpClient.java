@@ -9,6 +9,9 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -22,7 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class TcpClient {
 
 
-    public void upload(File file, AtomicLong atomicLong) {
+    public void upload(File file) {
         try (
                 Socket clientSocket = new Socket(Constants.IP_ADDRESS, Constants.SERVER_PORT);
                 BufferedOutputStream socketBufferedOutputStream = new BufferedOutputStream(clientSocket.getOutputStream());
@@ -47,11 +50,10 @@ public class TcpClient {
             // write the file to the socket
             byte[] buffer = new byte[Constants.BUFFER_SIZE];
             while (bufferedInputStream.read(buffer, 0, buffer.length) != -1) {
-                atomicLong.addAndGet(buffer.length);
                 socketDataOutputStream.write(buffer, 0, buffer.length);
             }
             socketDataOutputStream.flush();
-            System.out.println("The file (" + name + ") has sent to the server with " + atomicLong.get() + " byte size");
+            System.out.println("The file (" + name + ") has sent to the server with " + file.length() + " byte size");
         } catch (Exception e) {
             e.printStackTrace();
         }

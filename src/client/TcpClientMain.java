@@ -3,6 +3,8 @@ package client;
 import utils.Utilities;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -31,7 +33,7 @@ class TcpClientMain {
         // get list of Files
         File[] files = new File(folder).listFiles();
         //  list of the files sizes
-        List<AtomicLong> fileSizes = new ArrayList<>();
+        List<Long> fileSizes = new ArrayList<>();
         // create CLIENT POOL according to the concurrency level
         TCPClientPool clientPool = new TCPClientPool(concurrencyLevel);
         // get instance from the file-upload fileUploadFacade
@@ -80,18 +82,18 @@ class TcpClientMain {
         }
     }
 
-    private static void sendFiles(File[] files, ExecutorService executorService, List<AtomicLong> fileSizes, FileUploadFacade fileUploadFacade) {
+    private static void sendFiles(File[] files, ExecutorService executorService, List<Long> fileSizes, FileUploadFacade fileUploadFacade) {
         for (File file : files) {
+            Long fileSize = file.length();
             executorService.submit(() -> {
-                AtomicLong fileSize = new AtomicLong(0);
-                fileUploadFacade.upload(file, fileSize);
+                fileUploadFacade.upload(file);
                 fileSizes.add(fileSize);
             });
         }
     }
 
-    private static void displayThroughput(List<AtomicLong> fileSizes, long startTime, long endTime, int concurrencyLevel) {
-        long totalBytes = fileSizes.stream().map(AtomicLong::get).reduce(0L, Long::sum);
+    private static void displayThroughput(List<Long> fileSizes, long startTime, long endTime, int concurrencyLevel) {
+        long totalBytes = fileSizes.stream().reduce(0L,Long::sum);
         long totalTimeInNano = endTime - startTime;
         double totalTimeInSeconds = (double) totalTimeInNano / 1000000000;
         System.out.println("=====================================");

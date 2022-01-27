@@ -1,7 +1,6 @@
 package client;
 
 import java.io.File;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <h1>
@@ -31,9 +30,9 @@ public class FileUploadFacade {
         return instance;
     }
 
-    public void upload(File file, AtomicLong bytesSent) {
+    public void upload(File file) {
         TcpClient client = clientPool.getClient();
-        client.upload(file, bytesSent);
+        client.upload(file);
         clientPool.addConnection(client);
     }
 }
