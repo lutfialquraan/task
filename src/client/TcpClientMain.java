@@ -83,9 +83,9 @@ class TcpClientMain {
     private static void sendFiles(File[] files, ExecutorService executorService, List<AtomicLong> fileSizes, FileUploadFacade fileUploadFacade) {
         for (File file : files) {
             executorService.submit(() -> {
-                AtomicLong atomicLong = new AtomicLong(0);
-                fileUploadFacade.upload(file, atomicLong);
-                fileSizes.add(atomicLong);
+                AtomicLong fileSize = new AtomicLong(0);
+                fileUploadFacade.upload(file, fileSize);
+                fileSizes.add(fileSize);
             });
         }
     }
