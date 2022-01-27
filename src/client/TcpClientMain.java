@@ -22,11 +22,12 @@ import java.util.concurrent.atomic.AtomicLong;
 class TcpClientMain {
 
     public static void main(String[] args) throws Exception {
-
-        // read the folder from the argument
+        argumentValidator(args);
+        // read folder path
         String folder = args[0];
-        // read the concurrency level
-        int concurrencyLevel = Integer.parseInt(args[1]);
+        // read concurrency Level
+        int concurrencyLevel = args[1] != null ? Integer.parseInt(args[1]) : 1;
+
         // get list of Files
         File[] files = new File(folder).listFiles();
         //  list of the files sizes
@@ -39,16 +40,44 @@ class TcpClientMain {
         ExecutorService executorService = Executors.newFixedThreadPool(concurrencyLevel);
 
         // store the time before starting sending the files
-        long startTime = System.currentTimeMillis();
-        sendFiles(files, executorService, fileSizes, fileUploadFacade);
+        long startTime = System.nanoTime();
 
+        // send the files
+        sendFiles(files, executorService, fileSizes, fileUploadFacade);
         executorService.shutdown();
         // await for threads Termination before executing the next lines
-        executorService.awaitTermination(30, TimeUnit.SECONDS);
+        executorService.awaitTermination(60, TimeUnit.SECONDS);
         // store the time when the transferring finishes
-        long endTime = System.currentTimeMillis();
+        long endTime = System.nanoTime();
 
         displayThroughput(fileSizes, startTime, endTime, concurrencyLevel);
+    }
+
+    private static void argumentValidator(String[] args) {
+        int argumentLength = args.length;
+        if (argumentLength == 0) {
+            System.out.println("Proper Usage is: java TcpClientMain FOLDER_PATH ConcurrencyLevel");
+            System.exit(0);
+        }
+
+        if (argumentLength >= 1) {
+            try {
+                if (!new File(args[0]).isDirectory()) {
+                    throw new IllegalAccessException();
+                }
+            } catch (Exception e) {
+                System.out.println("This is not a Folder: Please make sure your folder path is correct!");
+                System.exit(0);
+            }
+        }
+        if (args.length == 2) {
+            try {
+                Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                System.out.println("This is not a number: Please make sure to enter an integer number!");
+                System.exit(0);
+            }
+        }
     }
 
     private static void sendFiles(File[] files, ExecutorService executorService, List<AtomicLong> fileSizes, FileUploadFacade fileUploadFacade) {
@@ -63,16 +92,15 @@ class TcpClientMain {
 
     private static void displayThroughput(List<AtomicLong> fileSizes, long startTime, long endTime, int concurrencyLevel) {
         long totalBytes = fileSizes.stream().map(AtomicLong::get).reduce(0L, Long::sum);
-
-        long totalTimeInMills = endTime - startTime;
-        System.out.println(startTime);
+        long totalTimeInNano = endTime - startTime;
+        double totalTimeInSeconds = (double) totalTimeInNano / 1000000000;
         System.out.println("=====================================");
-        System.out.println("finish in " + totalTimeInMills + " milli seconds");
+        System.out.println("finish in " + totalTimeInSeconds + " seconds");
         System.out.println("=====================================");
         long totalInMegaBytes = Utilities.bytesToMeg(totalBytes);
         System.out.println("Overall data size = " + totalInMegaBytes + " MB");
         System.out.println("=====================================");
         long totalInMegaBits = totalInMegaBytes * 8;
-        System.out.println("Throughout over " + concurrencyLevel + " concurrency level = " + (totalInMegaBits) / totalTimeInMills + " Mbpms");
+        System.out.println("Throughout over " + concurrencyLevel + " concurrency level = " + (totalInMegaBits) / totalTimeInSeconds + " Mbps");
     }
 }

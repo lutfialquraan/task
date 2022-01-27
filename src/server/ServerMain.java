@@ -32,7 +32,6 @@ public class ServerMain {
                 // accept connection from client and initialize server process
                 Socket clientSocket = serverSocket.accept();
                 clientSocket.setKeepAlive(true);
-                System.out.println("Connection received from: " + clientSocket.getLocalAddress());
                 // run the method on ServerProcess
                 executorService.submit(() -> worker.receive(clientSocket));
             }
