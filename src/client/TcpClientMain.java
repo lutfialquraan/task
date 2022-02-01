@@ -3,14 +3,11 @@ package client;
 import utils.Utilities;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <h1>
@@ -84,7 +81,7 @@ class TcpClientMain {
 
     private static void sendFiles(File[] files, ExecutorService executorService, List<Long> fileSizes, FileUploadFacade fileUploadFacade) {
         for (File file : files) {
-            Long fileSize = file.length();
+            long fileSize = file.length();
             executorService.submit(() -> {
                 fileUploadFacade.upload(file);
                 fileSizes.add(fileSize);
