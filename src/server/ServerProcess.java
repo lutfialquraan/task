@@ -2,10 +2,7 @@ package server;
 
 import utils.Utilities;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.nio.file.FileSystems;
 import java.security.MessageDigest;
@@ -24,6 +21,10 @@ class ServerProcess {
 
     public void receive(Socket clientSocket) {
         try {
+            File theDir = new File(Constants.FOLDER_NAME);
+            if (!theDir.exists()){
+                theDir.mkdirs();
+            }
             BufferedInputStream socketBufferedInputStream = new BufferedInputStream(clientSocket.getInputStream());
             DataInputStream socketDataInputStream = new DataInputStream(socketBufferedInputStream);
             // receive files as the client send them
