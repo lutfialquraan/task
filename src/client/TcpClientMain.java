@@ -25,7 +25,7 @@ class TcpClientMain {
         // read folder path
         String folder = args[0];
         // read concurrency Level
-        int concurrencyLevel = args[1] != null ? Integer.parseInt(args[1]) : 1;
+        int concurrencyLevel = args.length > 1 && args[1] != null ? Integer.parseInt(args[1]) : 1;
 
         // get list of Files
         File[] files = new File(folder).listFiles();
@@ -49,7 +49,12 @@ class TcpClientMain {
         // store the time when the transferring finishes
         long endTime = System.nanoTime();
 
-        displayThroughput(fileSizes, startTime, endTime, concurrencyLevel);
+        // close connections
+        clientPool.closeConnections();
+
+        if (!fileSizes.isEmpty()) {
+            displayThroughput(fileSizes, startTime, endTime, concurrencyLevel);
+        }
     }
 
     private static void argumentValidator(String[] args) {
@@ -90,7 +95,7 @@ class TcpClientMain {
     }
 
     private static void displayThroughput(List<Long> fileSizes, long startTime, long endTime, int concurrencyLevel) {
-        long totalBytes = fileSizes.stream().reduce(0L,Long::sum);
+        long totalBytes = fileSizes.stream().reduce(0L, Long::sum);
         long totalTimeInNano = endTime - startTime;
         double totalTimeInSeconds = (double) totalTimeInNano / 1000000000;
         System.out.println("=====================================");

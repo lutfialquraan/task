@@ -3,12 +3,7 @@ package client;
 
 import utils.Utilities;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.math.BigInteger;
+import java.io.*;
 import java.net.Socket;
 import java.security.MessageDigest;
 
@@ -22,52 +17,57 @@ import java.security.MessageDigest;
  */
 public class TcpClient {
 
+    private Socket socket;
+    private BufferedOutputStream socketBufferedOutputStream;
+    private DataOutputStream socketDataOutputStream;
+
+    public TcpClient(Socket socket) {
+        this.socket = socket;
+        try {
+            this.socketBufferedOutputStream = new BufferedOutputStream(this.socket.getOutputStream());
+            this.socketDataOutputStream = new DataOutputStream(socketBufferedOutputStream);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void upload(File file) {
-        try (
-                Socket clientSocket = new Socket(Constants.IP_ADDRESS, Constants.SERVER_PORT);
-                BufferedOutputStream socketBufferedOutputStream = new BufferedOutputStream(clientSocket.getOutputStream());
-                DataOutputStream socketDataOutputStream = new DataOutputStream(socketBufferedOutputStream);
-                FileInputStream fileInputStream = new FileInputStream(file);
-                BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
-        ) {
-            clientSocket.setKeepAlive(true);
+        try {
+            FileInputStream fileInputStream = new FileInputStream(file);
 
+            System.out.println("This socket is uploading a file: " + this.socket.toString());
             // write the file name to the socket
             String name = file.getName();
             socketDataOutputStream.writeUTF(name);
-            socketDataOutputStream.flush();
+            // write the file size
+            long fileSize = file.length();
+            socketDataOutputStream.writeLong(fileSize);
 
-            // calculate the checksum
-            long checksum = Utilities.calculateCrc(file);
-            // write the checksum to the socket
-            socketDataOutputStream.writeLong(checksum);
-            socketDataOutputStream.flush();
-            System.out.println("The checksum value for the file (" + name + ") = " + checksum);
-            MessageDigest md = MessageDigest.getInstance("MD5");
-
-            long size = file.length();
-            socketDataOutputStream.writeLong(size);
-            socketDataOutputStream.flush();
-            // write the file to the socket
+            int bytes = 0;
             byte[] buffer = new byte[Constants.BUFFER_SIZE];
-            while (bufferedInputStream.read(buffer, 0, buffer.length) != -1) {
-                md.update(buffer, 0, buffer.length);
-                socketDataOutputStream.write(buffer, 0, buffer.length);
-            }
             //Hash value array
-            byte[] digest = md.digest();
-            //1 indicates that this is an unsigned integer
-            BigInteger bigInteger = new BigInteger(1, digest);
-            //Output in hexadecimal form
-            System.out.println(bigInteger.toString(16));
-            socketDataOutputStream.flush();
-            socketDataOutputStream.writeUTF(bigInteger.toString(16));
-            socketDataOutputStream.flush();
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            // calculate the checksum while reading the file
+            while ((bytes = fileInputStream.read(buffer)) != -1) {
+                md.update(buffer, 0, buffer.length);
+                socketDataOutputStream.write(buffer, 0, bytes);
+                socketDataOutputStream.flush();
+            }
+            // write the checksum to the socket
+            String checksum = Utilities.md5ToString(md);
+            socketDataOutputStream.writeUTF(checksum);
+            socketBufferedOutputStream.flush();
 
+            fileInputStream.close();
             System.out.println("The file (" + name + ") has sent to the server with " + file.length() + " byte size");
+            System.out.println("The checksum value for the file (" + name + ") = " + checksum);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public Socket getSocket() {
+        return socket;
     }
 }

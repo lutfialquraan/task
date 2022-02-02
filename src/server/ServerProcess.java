@@ -3,17 +3,12 @@ package server;
 import utils.Utilities;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * <h1>
@@ -28,56 +23,45 @@ import java.security.NoSuchAlgorithmException;
 class ServerProcess {
 
     public void receive(Socket clientSocket) {
-        try (
-                BufferedInputStream socketBufferedInputStream = new BufferedInputStream(clientSocket.getInputStream());
-                DataInputStream socketDataInputStream = new DataInputStream(socketBufferedInputStream)
-        ) {
-
-            // read file name from the socket
-            String fileName = socketDataInputStream.readUTF();
-            // read checkSum
-            long checksum = socketDataInputStream.readLong();
-            System.out.println("==================================");
-            System.out.println("Checksum: " + checksum);
-            System.out.println("==================================");
-
-            long size = socketDataInputStream.readLong();
-
-
-            File uploadedFile = new File(Constant.FOLDER_NAME + FileSystems.getDefault().getSeparator() + fileName);
-            writeFile(socketDataInputStream, uploadedFile, size);
-            String md5 = socketDataInputStream.readUTF();
-            System.out.println("Client MD5 = " + md5);
-            System.out.println("Your " + fileName + " have been downloaded successfully on server ...");
-            long calculatedCrc = Utilities.calculateCrc(uploadedFile);
+        try {
+            BufferedInputStream socketBufferedInputStream = new BufferedInputStream(clientSocket.getInputStream());
+            DataInputStream socketDataInputStream = new DataInputStream(socketBufferedInputStream);
+            // receive files as the client send them
+            while (true) {
+                // make sure there is data in the stream
+                if (socketDataInputStream.available() != 0) {
+                    // read file name from the socket
+                    String fileName = socketDataInputStream.readUTF();
+                    // read the file size
+                    long fileSize = socketDataInputStream.readLong();
+                    String uploadedFile = Constants.FOLDER_NAME + FileSystems.getDefault().getSeparator() + fileName;
+                    MessageDigest md = MessageDigest.getInstance("MD5");
+                    writeFile(socketDataInputStream, uploadedFile, fileSize, md);
+                    System.out.println("Your " + fileName + " have been downloaded successfully on server ...");
+                    // read checkSum
+                    String checksum = socketDataInputStream.readUTF();
+                    System.out.println("==================================");
+                    System.out.println("Client's CHECKSUM = " + checksum);
+                    System.out.println("Server's CHECKSUM = " + Utilities.md5ToString(md));
+                    System.out.println("==================================");
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     private void writeFile(DataInputStream socketBufferedInputStream,
-                           File uploadedFile, long size) throws IOException, NoSuchAlgorithmException {
-        if (!uploadedFile.getParentFile().exists()) {
-            uploadedFile.getParentFile().mkdirs();
-        }
-        int currentSize = 0;
-        try (FileOutputStream fileOutputStream = new FileOutputStream(uploadedFile);
-             BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream)
-        ) {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] buffer = new byte[Constant.BUFFER_SIZE];
-            while (currentSize < size) {
-                currentSize += socketBufferedInputStream.read(buffer, 0, buffer.length);
-                md.update(buffer, 0, buffer.length);
-                bufferedOutputStream.write(buffer, 0, buffer.length);
-            }
-            //Hash value array
-            byte[] digest = md.digest();
-            //1 indicates that this is an unsigned integer
-            BigInteger bigInteger = new BigInteger(1, digest);
-            //Output in hexadecimal form
-            System.out.println(bigInteger.toString(16));
-        }
-    }
+                           String uploadedFile, long fileSize, MessageDigest md) throws IOException {
 
+        FileOutputStream fileOutputStream = new FileOutputStream(uploadedFile);
+        int bytes = 0;
+        byte[] buffer = new byte[Constants.BUFFER_SIZE];
+        while (fileSize > 0 && (bytes = socketBufferedInputStream.read(buffer, 0, (int) Math.min(buffer.length, fileSize))) != -1) {
+            md.update(buffer, 0, buffer.length); // calculate the checksum
+            fileOutputStream.write(buffer, 0, bytes);
+            fileSize -= bytes;      // read upto file size
+        }
+        fileOutputStream.close();
+    }
 }

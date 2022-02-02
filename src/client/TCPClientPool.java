@@ -1,7 +1,10 @@
 package client;
 
+import java.io.IOException;
+import java.net.Socket;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * <h1>
@@ -14,22 +17,24 @@ import java.util.concurrent.BlockingQueue;
 
 public class TCPClientPool {
     private BlockingQueue<TcpClient> clientConnectionPool;
+    private AtomicInteger currentNumOfConnections;
+    private int maxNumOfConnections;
 
     public TCPClientPool(int numberOfConnections) {
-        fillConnectionPool(numberOfConnections);
-    }
-
-    private void fillConnectionPool(int numberOfConnections) {
+        this.currentNumOfConnections = new AtomicInteger(0);
+        this.maxNumOfConnections = numberOfConnections;
         this.clientConnectionPool = new ArrayBlockingQueue<>(numberOfConnections);
-        for (int i = 0; i < numberOfConnections; ++i) {
-            this.clientConnectionPool.add(new TcpClient());
-        }
     }
 
     public TcpClient getClient() {
         try {
+            if (currentNumOfConnections.get() < maxNumOfConnections && clientConnectionPool.isEmpty()) {
+                currentNumOfConnections.incrementAndGet();
+                Socket socket = new Socket(Constants.IP_ADDRESS, Constants.SERVER_PORT);
+                return new TcpClient(socket);
+            }
             return clientConnectionPool.take();
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -38,4 +43,13 @@ public class TCPClientPool {
         clientConnectionPool.add(tcpClient);
     }
 
+    public void closeConnections() {
+        for (TcpClient client : clientConnectionPool) {
+            try {
+                client.getSocket().close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

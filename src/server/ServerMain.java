@@ -17,21 +17,16 @@ import java.util.concurrent.Executors;
  */
 public class ServerMain {
     public static void main(String[] args) {
-
         ExecutorService executorService = Executors.newCachedThreadPool();
-
         try {
-            // create instance from ServerProcess
-            ServerSocket serverSocket = new ServerSocket(Constant.SERVER_PORT);
-            System.out.printf("- Server is listening on port : %d\n", Constant.SERVER_PORT);
-
+            ServerSocket serverSocket = new ServerSocket(Constants.SERVER_PORT);
+            System.out.printf("- Server is listening on port : %d\n", Constants.SERVER_PORT);
             // create worker for all tasks
             ServerProcess worker = new ServerProcess();
 
             while (true) {
-                // accept connection from client and initialize server process
+                // accept connection from client
                 Socket clientSocket = serverSocket.accept();
-                clientSocket.setKeepAlive(true);
                 // run the method on ServerProcess
                 executorService.submit(() -> worker.receive(clientSocket));
             }
